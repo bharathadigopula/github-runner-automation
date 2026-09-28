@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: github-runner:${GITHUB_RUNNER_VERSION:-2.331.0}
+    image: github-runner:${GITHUB_RUNNER_VERSION:-2.337.0}
 
     #==========================================================================
     # DEPLOY RUNNER RESOURCE LIMITS
@@ -41,8 +41,8 @@ services:
       GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
       GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
       GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
-      RUNNER_LABELS: platform,deploy
-      RUNNER_NAME_PREFIX: platform-deploy
+      RUNNER_LABELS: ${RUNNER_ORGANISATION_LABEL:-bharathcloudops},${RUNNER_LOCATION_LABEL:-oci-platform},deploy
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}-deploy-${RUNNER_DEPLOY_SEQUENCE:-01}
 
     restart: unless-stopped
     secrets:
@@ -59,7 +59,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: github-runner:${GITHUB_RUNNER_VERSION:-2.331.0}
+    image: github-runner:${GITHUB_RUNNER_VERSION:-2.337.0}
 
     #==========================================================================
     # VALIDATE RUNNER RESOURCE LIMITS
@@ -79,8 +79,8 @@ services:
       GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
       GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
       GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
-      RUNNER_LABELS: platform,validate
-      RUNNER_NAME_PREFIX: platform-validate
+      RUNNER_LABELS: ${RUNNER_ORGANISATION_LABEL:-bharathcloudops},${RUNNER_LOCATION_LABEL:-oci-platform},validate
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}-validate-${RUNNER_VALIDATE_SEQUENCE:-01}
 
     restart: unless-stopped
     secrets:
@@ -88,6 +88,27 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner-validate-workspace:/home/runner/_work
+
+  #============================================================================
+  # PRIVATE RUNNER METRICS EXPORTER
+  #============================================================================
+
+  runner-metrics:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/host/var/lib/github-runner-metrics
+    deploy:
+      resources:
+        limits:
+          cpus: "0.02"
+          memory: 32M
+    ports:
+      - ${GITHUB_RUNNER_BIND_ADDRESS:-127.0.0.1}:9101:9100
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - /:/host:ro,rslave
 
   #==============================================================================
   # RUNNER SECRETS

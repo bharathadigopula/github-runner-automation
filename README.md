@@ -31,8 +31,14 @@ comparison.
 
 | Runner | Labels | Purpose | Resource cap |
 | --- | --- | --- | --- |
-| `runner-deploy` | `platform`, `deploy` | Terraform apply, container publish, deploy, backup pipelines - anything that mutates production | 0.50 CPU, 1024 MB |
-| `runner-validate` | `platform`, `validate` | Lint, ShellCheck, `terraform validate`/`plan`, unit tests, repository validation | 0.30 CPU, 512 MB |
+| `bharathcloudops-oci-platform-deploy-01` | `bharathcloudops`, `oci-platform`, `deploy` | Terraform apply, container publish, deploy, backup pipelines - anything that mutates production | 0.50 CPU, 1024 MB |
+| `bharathcloudops-oci-platform-validate-01` | `bharathcloudops`, `oci-platform`, `validate` | Lint, ShellCheck, `terraform validate`/`plan`, unit tests, repository validation | 0.30 CPU, 512 MB |
+
+Runner names follow `bharathcloudops-<cloud>-<server>-<role>-<sequence>`. The
+cloud and server segments identify the OCI `platform` host, the role is `deploy` or `validate`, and the
+two-digit sequence leaves room for future capacity without renaming existing
+runners. For example, a second validation runner on the same host is
+`bharathcloudops-oci-platform-validate-02`.
 
 Infra-mutating workflows must additionally declare a GitHub Actions
 `concurrency:` group (for example `deploy-${{ inputs.environment }}`) so only
@@ -50,15 +56,21 @@ RUNNER PROFILE
 
 | Setting | Default |
 | --- | --- |
-| Runner image | `ghcr.io/actions/actions-runner:2.331.0` |
+| Runner image | `ghcr.io/actions/actions-runner:2.337.0` |
 | Docker Engine and CLI | `29.8.1` |
-| containerd | `2.3.5` |
+| containerd | `2.3.6` |
 | Docker Buildx | `0.37.1` |
 | Docker Compose | `5.5.1` |
 | Runner mode | `--ephemeral` (one job per registration, then re-registers) |
 | `runner-deploy` limit | 0.50 CPU and 1024 MB memory |
 | `runner-validate` limit | 0.30 CPU and 512 MB memory |
 | Combined worst case | 0.80 CPU and 1536 MB memory (versus Jenkins' fixed 1.20 CPU / 4096 MB) |
+
+A private node-exporter endpoint adds a 0.02 CPU / 32 MB cap and exposes OCI
+`platform` host capacity plus runner API state to the existing Prometheus
+instance. It binds only to `GITHUB_RUNNER_BIND_ADDRESS`, which defaults to
+loopback; deployments may set a private RFC1918 address, but must never
+publish port `9101` publicly.
 
 Both runners are stateless between jobs. There is no `JENKINS_HOME` equivalent
 to back up; a fresh ephemeral workspace is created and discarded per job, so
@@ -74,7 +86,7 @@ REGISTRATION SCOPE
 
 GitHub only allows organisation-wide runner groups (one runner shared across
 many repositories) under a **GitHub Organization**. Personal-account
-repositories (the current `bharathadigopula/*` layout) can only register
+repositories can only register
 **repository-level** runners - one registration per repository, even though
 the same two containers can still serve multiple repositories sequentially by
 being re-registered, or by running one container pair per repository.

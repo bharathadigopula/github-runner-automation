@@ -1,0 +1,21 @@
+#==============================================================================
+# RUNNER METRICS EXPORT SERVICE
+#==============================================================================
+
+#==============================================================================
+# UNIT IDENTITY
+#==============================================================================
+
+[Unit]
+Description=Export GitHub runner status to the node-exporter textfile collector
+After=github-runner-deploy.service github-runner-validate.service
+
+#==============================================================================
+# EXPORT EXECUTION
+#==============================================================================
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/github-runner/current/.env
+ExecStart=/usr/bin/bash /opt/github-runner/current/scripts/export-metrics.sh
+TimeoutStartSec=60

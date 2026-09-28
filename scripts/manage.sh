@@ -49,10 +49,14 @@ require_root() {
 write_environment() {
   cat > "$release_path/.env" <<EOF
 GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
-GITHUB_RUNNER_VERSION=${GITHUB_RUNNER_VERSION:-2.331.0}
+GITHUB_RUNNER_BIND_ADDRESS=${GITHUB_RUNNER_BIND_ADDRESS:-127.0.0.1}
+GITHUB_RUNNER_VERSION=${GITHUB_RUNNER_VERSION:-2.337.0}
 GITHUB_SCOPE=${GITHUB_SCOPE:-repo}
 GITHUB_TARGET=${GITHUB_TARGET:?GITHUB_TARGET is required}
 GITHUB_TOKEN_FILE=./secrets/github-token
+RUNNER_LOCATION_LABEL=${RUNNER_LOCATION_LABEL:-oci-platform}
+RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}
+RUNNER_ORGANISATION_LABEL=${RUNNER_ORGANISATION_LABEL:-bharathcloudops}
 EOF
   chmod 0600 "$release_path/.env"
 }
@@ -79,7 +83,7 @@ deploy_runners() {
   cp -a "$source_root/." "$release_path/"
   install -d -m 0700 "$release_path/secrets"
   jq -r '.github_token' <<< "$secret_bundle" > "$release_path/secrets/github-token"
-  chown 1000:1000 "$release_path/secrets/github-token"
+  chown 1001:1001 "$release_path/secrets/github-token"
   chmod 0400 "$release_path/secrets/github-token"
   write_environment
 
@@ -92,10 +96,15 @@ deploy_runners() {
   install -m 0644 "$release_path/systemd/github-runner-validate.service" /etc/systemd/system/github-runner-validate.service
   install -m 0644 "$release_path/systemd/github-runner-health.service" /etc/systemd/system/github-runner-health.service
   install -m 0644 "$release_path/systemd/github-runner-health.timer" /etc/systemd/system/github-runner-health.timer
+  install -m 0644 "$release_path/systemd/github-runner-metrics.service" /etc/systemd/system/github-runner-metrics.service
+  install -m 0644 "$release_path/systemd/github-runner-metrics.timer" /etc/systemd/system/github-runner-metrics.timer
   systemctl daemon-reload
+  install -d -m 0755 /var/lib/github-runner-metrics
   systemctl enable --now github-runner-deploy.service
   systemctl enable --now github-runner-validate.service
+  docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" up --detach runner-metrics
   systemctl enable --now github-runner-health.timer
+  systemctl enable --now github-runner-metrics.timer
   printf 'github_runner_deploy=ready\n'
   verify_runners
 }
@@ -135,7 +144,7 @@ status_runners() {
   local component
   local exit_code=0
 
-  for component in github-runner-deploy.service github-runner-validate.service github-runner-health.timer; do
+  for component in github-runner-deploy.service github-runner-validate.service github-runner-health.timer github-runner-metrics.timer; do
     if runner_service_running "$component"; then
       printf '%s=active\n' "$component"
     else

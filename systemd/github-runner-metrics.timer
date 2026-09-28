@@ -1,34 +1,27 @@
 #==============================================================================
-# VALIDATE RUNNER SYSTEMD SERVICE
+# RUNNER METRICS EXPORT TIMER
 #==============================================================================
 
 #==============================================================================
-# UNIT DEPENDENCIES
+# UNIT IDENTITY
 #==============================================================================
 
 [Unit]
-Description=GitHub Actions validate runner (platform,validate)
-Requires=docker.service
-After=docker.service network-online.target
-Wants=network-online.target
+Description=Export GitHub runner status every thirty seconds
 
 #==============================================================================
-# SERVICE LIFECYCLE
+# EXPORT SCHEDULE
 #==============================================================================
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/opt/github-runner/current
-ExecStart=/usr/bin/docker compose up --detach --build runner-validate
-ExecReload=/usr/bin/docker compose up --detach --build runner-validate
-ExecStop=/usr/bin/docker compose stop runner-validate
-TimeoutStartSec=600
-TimeoutStopSec=120
+[Timer]
+OnBootSec=1m
+OnUnitInactiveSec=30s
+AccuracySec=5s
+Unit=github-runner-metrics.service
 
 #==============================================================================
-# SERVICE INSTALLATION
+# TIMER INSTALLATION
 #==============================================================================
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=timers.target

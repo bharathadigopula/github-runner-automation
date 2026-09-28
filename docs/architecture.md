@@ -69,6 +69,30 @@ Jenkins provides today, independent of how many runner processes exist.
 
 <!--
 ==============================================================================
+RUNNER NAMING AND LABELS
+==============================================================================
+-->
+
+## Runner Naming And Labels
+
+Runner names use `bharathcloudops-<cloud>-<server>-<role>-<sequence>`:
+
+| Segment | Meaning | Current value |
+| --- | --- | --- |
+| `bharathcloudops` | Platform identity | Fixed |
+| `<cloud>` | Cloud provider | `oci` |
+| `<server>` | OCI host executing the runner | `platform` |
+| `<role>` | Workload boundary | `deploy` or `validate` |
+| `<sequence>` | Two-digit capacity index | `01` |
+
+The corresponding labels are `bharathcloudops`, `<cloud>-<server>`, and `<role>`.
+Workflows select a role with either
+`runs-on: [self-hosted, bharathcloudops, oci-platform, deploy]` or
+`runs-on: [self-hosted, bharathcloudops, oci-platform, validate]`; they never
+select an individual numbered runner name.
+
+<!--
+==============================================================================
 STATELESS DESIGN
 ==============================================================================
 -->
@@ -80,3 +104,22 @@ executes exactly one job, deregisters, and exits. Docker Compose's restart
 policy brings up a fresh container and registration for the next job. There
 is no equivalent to `JENKINS_HOME` to back up or restore, and no
 `jenkins-controller-backup.timer` equivalent is required.
+
+<!--
+==============================================================================
+MONITORING PATH
+==============================================================================
+-->
+
+## Monitoring Path
+
+The `runner-metrics` container runs the latest pinned node exporter with a
+0.02 CPU / 32 MB limit. It exposes OCI `platform` host CPU, memory, filesystem,
+and textfile metrics on the configured private address and port `9101`. A systemd timer
+queries the GitHub runner and workflow-run APIs every 30 seconds and
+atomically writes `/var/lib/github-runner-metrics/github_runner.prom`.
+
+The existing Prometheus instance on OCI `k3s` scrapes that private endpoint.
+Alertmanager handles runner-offline, stale-metrics, blocked-queue, and recent
+workflow-failure alerts; Grafana provisions the `github-actions-runners`
+dashboard from the monitoring repository.

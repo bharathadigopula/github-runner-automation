@@ -19,8 +19,9 @@ github_api_url="${GITHUB_API_URL:-https://api.github.com}"
 github_scope="${GITHUB_SCOPE:?GITHUB_SCOPE is required}"
 github_target="${GITHUB_TARGET:?GITHUB_TARGET is required}"
 runner_labels="${RUNNER_LABELS:?RUNNER_LABELS is required}"
-runner_name="${RUNNER_NAME_PREFIX:?RUNNER_NAME_PREFIX is required}-$(hostname)"
+runner_name="${RUNNER_NAME:?RUNNER_NAME is required}"
 token_file="/run/secrets/github_token"
+docker_socket_gid=$(stat --format '%g' /var/run/docker.sock)
 
 if [[ ! -r "$token_file" ]]; then
   printf 'GitHub token secret is not mounted.\n' >&2
@@ -66,7 +67,7 @@ fi
 # EPHEMERAL REGISTRATION AND EXECUTION
 #==============================================================================
 
-./config.sh \
+setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs ./config.sh \
   --unattended \
   --ephemeral \
   --url "$runner_url" \
@@ -75,9 +76,15 @@ fi
   --labels "$runner_labels" \
   --work "_work"
 
+# shellcheck disable=SC2329
 cleanup() {
-  ./config.sh remove --token "$registration_token" >/dev/null 2>&1 || true
+  setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs ./config.sh remove --token "$registration_token" >/dev/null 2>&1 || true
+  rm -f .credentials .credentials_rsaparams .runner
 }
 trap cleanup EXIT
 
-./run.sh
+set +e
+setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs ./run.sh
+runner_exit_code=$?
+set -e
+exit "$runner_exit_code"
