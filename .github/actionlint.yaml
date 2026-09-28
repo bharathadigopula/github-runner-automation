@@ -1,0 +1,10 @@
+#==============================================================================
+# SELF-HOSTED RUNNER LABELS
+#==============================================================================
+
+self-hosted-runner:
+  labels:
+    - bharathcloudops
+    - oci-platform
+    - deploy
+    - validate

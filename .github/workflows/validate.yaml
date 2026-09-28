@@ -18,7 +18,7 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, bharathcloudops, oci-platform, validate]
     steps:
       - uses: actions/checkout@v7.0.1
 
