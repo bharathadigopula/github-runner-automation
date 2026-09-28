@@ -83,7 +83,7 @@ deploy_runners() {
   cp -a "$source_root/." "$release_path/"
   install -d -m 0700 "$release_path/secrets"
   jq -r '.github_token' <<< "$secret_bundle" > "$release_path/secrets/github-token"
-  chown 1001:1001 "$release_path/secrets/github-token"
+  chown root:root "$release_path/secrets/github-token"
   chmod 0400 "$release_path/secrets/github-token"
   write_environment
 
