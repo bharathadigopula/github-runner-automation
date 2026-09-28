@@ -155,6 +155,8 @@ status_runners() {
     fi
   done
 
+  df --human-readable / /var/lib/docker
+  docker system df
   docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps || exit_code=1
   if (( exit_code == 0 )); then
     printf 'github_runner_status=ready\n'

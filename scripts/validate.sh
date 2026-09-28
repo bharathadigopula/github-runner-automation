@@ -58,8 +58,12 @@ if ! grep -Fq -- '--ephemeral' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'docker_socket_gid' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'export HOME=/home/runner' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'ENV HOME=/home/runner' "$repository_root/Dockerfile" || \
+  ! grep -Fq 'python3-venv' "$repository_root/Dockerfile" || \
+  ! grep -Fq 'docker builder prune --all --force' "$repository_root/scripts/entrypoint.sh" || \
+  ! grep -Fq 'docker image prune --all --force' "$repository_root/scripts/entrypoint.sh" || \
+  ! grep -Fq '! -name _tool' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'chown -R 1001:1001 /home/runner/_work' "$repository_root/scripts/entrypoint.sh"; then
-  printf 'Runners must run ephemeral with a writable workspace and non-root Docker socket access.\n' >&2
+  printf 'Runners must run ephemeral with required tools, bounded storage, and non-root Docker socket access.\n' >&2
   exit 1
 fi
 
