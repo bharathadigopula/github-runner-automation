@@ -17,7 +17,7 @@ set -euo pipefail
 repository_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 runner_version=$(sed -n 's/^FROM ghcr.io\/actions\/actions-runner://p' "$repository_root/Dockerfile")
 node_exporter_version=$(sed -n 's/^[[:space:]]*image: quay.io\/prometheus\/node-exporter:v//p' "$repository_root/compose.yaml")
-checkout_version=$(sed -n 's/^[[:space:]]*- uses: actions\/checkout@v//p' "$repository_root/.github/workflows/validate.yaml")
+checkout_version=$(awk -F'@v' '/uses: actions\/checkout@v/ { print $2; exit }' "$repository_root/.github/workflows/validate.yaml")
 containerd_version=$(grep '^containerd_version=' "$repository_root/scripts/install-docker.sh" | awk -F':-' '{ value = $2; sub(/}"$/, "", value); print value }')
 docker_buildx_version=$(grep '^docker_buildx_version=' "$repository_root/scripts/install-docker.sh" | awk -F':-' '{ value = $2; sub(/}"$/, "", value); print value }')
 docker_compose_version=$(grep '^docker_compose_version=' "$repository_root/scripts/install-docker.sh" | awk -F':-' '{ value = $2; sub(/}"$/, "", value); print value }')
