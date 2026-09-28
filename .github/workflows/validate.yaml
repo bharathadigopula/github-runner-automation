@@ -35,4 +35,6 @@ jobs:
         run: bash scripts/check-latest-versions.sh
 
       - name: Build runner image
+        env:
+          GITHUB_TARGET: owner/repository
         run: docker compose build
