@@ -19,7 +19,7 @@ WHY TWO RUNNERS, NOT ONE
 ==============================================================================
 -->
 
-## Why Two Runners, Not One
+## 🏃 Why Two Runners
 
 Jenkins today runs with exactly one executor (`numExecutors: 1` on the
 `platform` agent), so every job across every repository already queues
@@ -52,7 +52,7 @@ RUNNER PROFILE
 ==============================================================================
 -->
 
-## Runner Profile
+## 📊 Runner Profile
 
 | Setting | Default |
 | --- | --- |
@@ -82,25 +82,21 @@ REGISTRATION SCOPE
 ==============================================================================
 -->
 
-## Registration Scope
+## 🌐 Registration Scope
 
-GitHub only allows organisation-wide runner groups (one runner shared across
-many repositories) under a **GitHub Organization**. Personal-account
-repositories can only register
-**repository-level** runners - one registration per repository, even though
-the same two containers can still serve multiple repositories sequentially by
-being re-registered, or by running one container pair per repository.
+The production runners register once for the `bharathcloudops` organization and
+serve its private repositories through the default runner group.
 
 This automation supports both modes through `GITHUB_SCOPE`:
 
 | `GITHUB_SCOPE` | `GITHUB_TARGET` | Effect |
 | --- | --- | --- |
-| `repo` (default) | `owner/repository` | Registers against a single repository |
-| `org` | `organization` | Registers against an organisation-wide runner group (requires migrating the affected repositories into a GitHub Organization first) |
+| `repo` (default) | `owner/repository` | Registers against one repository |
+| `org` | `organization` | Registers once for eligible organization repositories |
 
-Until an organisation migration is approved, deploy one `runner-deploy` /
-`runner-validate` pair per repository that needs to leave Jenkins, reusing the
-same pinned image and systemd units with a different `GITHUB_TARGET`.
+Public repositories remain on GitHub-hosted runners. This avoids exposing the
+OCI host to untrusted pull-request code and does not consume private-repository
+hosted minutes.
 
 <!--
 ==============================================================================
@@ -108,7 +104,7 @@ SECURITY MODEL
 ==============================================================================
 -->
 
-## Security Model
+## 🔒 Security Model
 
 - Runners are **ephemeral**: `config.sh --ephemeral` deregisters the runner
   after exactly one job, limiting the blast radius of a compromised job.
@@ -132,7 +128,7 @@ VALIDATION AND DRY RUN
 ==============================================================================
 -->
 
-## Validate And Dry Run
+## ✅ Validate And Dry Run
 
 These commands do not mutate the host:
 
@@ -149,7 +145,7 @@ VERSIONED DEPLOYMENT
 ==============================================================================
 -->
 
-## Versioned Deployment
+## 🚀 Versioned Deployment
 
 `bootstrap.sh` stays below the OCI Run Command 4,096-byte payload limit,
 matching the pattern used by `jenkins-controller-automation`. It downloads an

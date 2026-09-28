@@ -12,7 +12,7 @@ REGISTRATION TOKEN FLOW
 ==============================================================================
 -->
 
-## Registration Token Flow
+## 🔑 Registration Token Flow
 
 GitHub self-hosted runner registration tokens expire roughly one hour after
 being minted, so this automation never stores a pre-fetched token. Instead:
@@ -31,10 +31,8 @@ being minted, so this automation never stores a pre-fetched token. Instead:
    container exits; the systemd unit's `Restart=always` starts a new
    container, repeating the cycle.
 
-This means the registration token in the secret bundle only has to be valid
-at deploy time, and every subsequent job gets a freshly minted token
-automatically - restarts, upgrades, and long idle periods never hit an
-expired-token failure.
+The root-only secret contains the durable credential used to mint short-lived
+registration tokens. The registration tokens themselves are never persisted.
 
 <!--
 ==============================================================================
@@ -42,28 +40,22 @@ ROLLOUT SEQUENCE
 ==============================================================================
 -->
 
-## Rollout Sequence
+## 🚀 Rollout Sequence
 
-1. **Scaffold** (this change): versioned compose/systemd/scripts, no
-   production deployment yet.
-2. **Deploy alongside Jenkins**: run `scripts/bootstrap.sh deploy` through the
-   *existing* Jenkins pipeline, the same way Jenkins deploys every other
-   managed service today. Both `runner-deploy` and `runner-validate` start
-   next to the running Jenkins controller and agent.
-3. **Port pipelines**: move each `.jenkins/pipelines/*.groovy` stage list into
+1. **Deploy runners**: use the host-config GitHub Actions workflow and OCI Run
+   Command to deploy both runner services beside Jenkins.
+2. **Port pipelines**: move each `.jenkins/pipelines/*.groovy` stage list into
    an equivalent reusable workflow under `github-pipeline-templates`,
-   preserving the same checkout / validate / plan / approve / apply gating
-   structure stage-for-stage.
-4. **Parallel run**: trigger the ported GitHub Actions workflow for a
+   preserving validation and approval gates.
+3. **Prove workloads**: trigger the ported GitHub Actions workflow for a
    repository and confirm it completes successfully at least once before
    changing that repository's required status checks.
-5. **Cut over per repository**: update branch protection / required status
+4. **Cut over per repository**: update branch protection and required status
    checks from `continuous-integration/jenkins` to the new workflow's check
    name, one repository at a time.
-6. **Decommission** (separate, explicitly approved step): once no repository
-   depends on Jenkins for a full cycle, stop (not delete) the
-   `jenkins-controller-automation` compose stack and reclaim its 4096 MB
-   memory cap.
+5. **Retire Jenkins**: create and verify a durable final backup, then remove
+   Jenkins services, containers, volumes, files, secrets, and monitoring through
+   repository-driven automation.
 
 <!--
 ==============================================================================
@@ -71,7 +63,7 @@ LIFECYCLE ACTIONS
 ==============================================================================
 -->
 
-## Lifecycle Actions
+## 🛠️ Lifecycle Actions
 
 | Action | What it does |
 | --- | --- |
@@ -89,12 +81,13 @@ DECOMMISSION CHECKLIST
 ==============================================================================
 -->
 
-## Decommission Checklist (Do Not Run Until Explicitly Approved)
+## 🧹 Jenkins Retirement Checklist
 
 - [ ] Every repository's required status check points at the new workflow.
 - [ ] Every `.jenkins/pipelines/*.groovy` stage has an equivalent, tested
       GitHub Actions workflow.
 - [ ] At least one full deploy pipeline and one full validate pipeline have
       succeeded end-to-end per repository on the new runners.
-- [ ] `jenkins-controller-automation`'s compose stack is stopped, not deleted,
-      so it remains available as a rollback path for a defined grace period.
+- [ ] A final Jenkins backup is copied off-host and its restore is verified.
+- [ ] Jenkins services, containers, volumes, files, secrets, routes, alerts,
+   dashboards, and obsolete repository integrations are permanently removed.

@@ -2,7 +2,7 @@
 # GITHUB RUNNER STACK VALIDATION WORKFLOW
 #==============================================================================
 
-name: validate
+name: 01 - Validate Runner Automation
 
 on:
   pull_request:
@@ -18,23 +18,25 @@ on:
 
 jobs:
   validate:
+    name: 01 - Validate Runner Stack
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - name: 01 - Checkout Repository
+        uses: actions/checkout@v7.0.1
 
-      - name: ShellCheck
+      - name: 02 - Run ShellCheck
         run: |
           sudo apt-get update
           sudo apt-get install --yes shellcheck
           shellcheck scripts/*.sh
 
-      - name: Validate runner stack
+      - name: 03 - Validate Runner Stack
         run: bash scripts/validate.sh
 
-      - name: Check latest upstream versions
+      - name: 04 - Check Upstream Versions
         run: bash scripts/check-latest-versions.sh
 
-      - name: Build runner image
+      - name: 05 - Build Runner Image
         env:
           GITHUB_TARGET: owner/repository
         run: docker compose build
