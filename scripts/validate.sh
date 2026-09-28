@@ -80,6 +80,11 @@ if ! grep -Fq 'systemctl restart github-runner-deploy.service' "$repository_root
   exit 1
 fi
 
+if ! grep -Fq "printf 'github_runner_status=ready" "$repository_root/scripts/manage.sh"; then
+  printf 'Runner status must publish its OCI Run Command readiness marker.\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq "GITHUB_RUNNER_BIND_ADDRESS=\$github_runner_bind_address" "$repository_root/scripts/bootstrap.sh"; then
   printf 'The metrics bind address must be forwarded through the versioned bootstrap.\n' >&2
   exit 1
