@@ -22,6 +22,7 @@ runner_labels="${RUNNER_LABELS:?RUNNER_LABELS is required}"
 runner_name="${RUNNER_NAME:?RUNNER_NAME is required}"
 token_file="/run/secrets/github_token"
 docker_socket_gid=$(stat --format '%g' /var/run/docker.sock)
+export HOME=/home/runner
 
 if [[ ! -r "$token_file" ]]; then
   printf 'GitHub token secret is not mounted.\n' >&2
