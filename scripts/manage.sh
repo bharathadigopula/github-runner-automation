@@ -121,6 +121,12 @@ runner_service_running() {
   systemctl is-active --quiet "$service_name"
 }
 
+runner_container_running() {
+  local runner_name="$1"
+
+  [[ -n "$(docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps --quiet --status running "$runner_name")" ]]
+}
+
 verify_runners() {
   local attempt
   local deploy_container
@@ -177,6 +183,31 @@ recover_runners() {
 }
 
 #==============================================================================
+# NON-DISRUPTIVE HEALTH RECOVERY
+#==============================================================================
+
+health_runners() {
+  require_root
+  local container_name
+  local index
+  local service_name
+  local container_names=(runner-deploy runner-validate)
+  local service_names=(github-runner-deploy.service github-runner-validate.service)
+
+  for index in "${!service_names[@]}"; do
+    service_name="${service_names[$index]}"
+    container_name="${container_names[$index]}"
+    if ! runner_service_running "$service_name" || ! runner_container_running "$container_name"; then
+      printf 'github_runner_health_restarting=%s\n' "$service_name"
+      systemctl restart "$service_name"
+    fi
+  done
+
+  verify_runners
+  printf 'github_runner_health=ready\n'
+}
+
+#==============================================================================
 # LIFECYCLE DISPATCH
 #==============================================================================
 
@@ -187,6 +218,7 @@ case "$action" in
   verify) verify_runners ;;
   status) status_runners ;;
   recover) recover_runners ;;
+  health) health_runners ;;
   *)
     printf 'Unsupported GitHub runner lifecycle action: %s\n' "$action" >&2
     exit 2

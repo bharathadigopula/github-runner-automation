@@ -107,6 +107,14 @@ if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/ma
   exit 1
 fi
 
+if ! grep -Fq 'manage.sh health' "$repository_root/systemd/github-runner-health.service" || \
+  grep -Fq 'manage.sh recover' "$repository_root/systemd/github-runner-health.service" || \
+  ! grep -Fq "printf 'github_runner_health=ready" "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "runner_container_running \"\$container_name\"" "$repository_root/scripts/manage.sh"; then
+  printf 'Periodic health checks must only restart runner roles whose service or container is down.\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq 'attempt <= 30' "$repository_root/scripts/manage.sh" || \
   ! grep -Fq -- '--status running runner-deploy' "$repository_root/scripts/manage.sh" || \
   ! grep -Fq -- '--status running runner-validate' "$repository_root/scripts/manage.sh"; then

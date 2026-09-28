@@ -17,5 +17,5 @@ After=github-runner-deploy.service github-runner-validate.service
 [Service]
 Type=oneshot
 EnvironmentFile=/opt/github-runner/current/.env
-ExecStart=/usr/bin/bash /opt/github-runner/current/scripts/manage.sh recover
+ExecStart=/usr/bin/bash /opt/github-runner/current/scripts/manage.sh health
 TimeoutStartSec=300
