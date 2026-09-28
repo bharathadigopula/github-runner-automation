@@ -1,0 +1,34 @@
+#==============================================================================
+# DEPLOY RUNNER SYSTEMD SERVICE
+#==============================================================================
+
+#==============================================================================
+# UNIT DEPENDENCIES
+#==============================================================================
+
+[Unit]
+Description=GitHub Actions deploy runner (platform,deploy)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+#==============================================================================
+# SERVICE LIFECYCLE
+#==============================================================================
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/github-runner/current
+ExecStart=/usr/bin/docker compose up --detach --build --remove-orphans runner-deploy
+ExecReload=/usr/bin/docker compose up --detach --build --remove-orphans runner-deploy
+ExecStop=/usr/bin/docker compose stop runner-deploy
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+#==============================================================================
+# SERVICE INSTALLATION
+#==============================================================================
+
+[Install]
+WantedBy=multi-user.target

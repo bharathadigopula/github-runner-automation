@@ -1,0 +1,106 @@
+#==============================================================================
+# LOW RESOURCE GITHUB ACTIONS RUNNERS
+#==============================================================================
+
+#==============================================================================
+# STACK IDENTITY
+#==============================================================================
+
+name: github-runner
+
+#==============================================================================
+# RUNNER SERVICES
+#==============================================================================
+
+services:
+  #============================================================================
+  # DEPLOY RUNNER - MUTATING PIPELINES ONLY
+  #============================================================================
+
+  runner-deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: github-runner:${GITHUB_RUNNER_VERSION:-2.331.0}
+
+    #==========================================================================
+    # DEPLOY RUNNER RESOURCE LIMITS
+    #==========================================================================
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1024M
+
+    #==========================================================================
+    # DEPLOY RUNNER RUNTIME ENVIRONMENT
+    #==========================================================================
+
+    environment:
+      GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
+      GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
+      GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
+      RUNNER_LABELS: platform,deploy
+      RUNNER_NAME_PREFIX: platform-deploy
+
+    restart: unless-stopped
+    secrets:
+      - github_token
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner-deploy-workspace:/home/runner/_work
+
+  #============================================================================
+  # VALIDATE RUNNER - NON-MUTATING CHECKS ONLY
+  #============================================================================
+
+  runner-validate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: github-runner:${GITHUB_RUNNER_VERSION:-2.331.0}
+
+    #==========================================================================
+    # VALIDATE RUNNER RESOURCE LIMITS
+    #==========================================================================
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: 512M
+
+    #==========================================================================
+    # VALIDATE RUNNER RUNTIME ENVIRONMENT
+    #==========================================================================
+
+    environment:
+      GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
+      GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
+      GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
+      RUNNER_LABELS: platform,validate
+      RUNNER_NAME_PREFIX: platform-validate
+
+    restart: unless-stopped
+    secrets:
+      - github_token
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner-validate-workspace:/home/runner/_work
+
+  #==============================================================================
+  # RUNNER SECRETS
+  #==============================================================================
+
+secrets:
+  github_token:
+    file: ${GITHUB_TOKEN_FILE:-./secrets/github-token}
+
+#==============================================================================
+# RUNNER PERSISTENT VOLUMES
+#==============================================================================
+
+volumes:
+  runner-deploy-workspace:
+  runner-validate-workspace:

@@ -1,0 +1,34 @@
+#==============================================================================
+# VALIDATE RUNNER SYSTEMD SERVICE
+#==============================================================================
+
+#==============================================================================
+# UNIT DEPENDENCIES
+#==============================================================================
+
+[Unit]
+Description=GitHub Actions validate runner (platform,validate)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+#==============================================================================
+# SERVICE LIFECYCLE
+#==============================================================================
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/github-runner/current
+ExecStart=/usr/bin/docker compose up --detach --build --remove-orphans runner-validate
+ExecReload=/usr/bin/docker compose up --detach --build --remove-orphans runner-validate
+ExecStop=/usr/bin/docker compose stop runner-validate
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+#==============================================================================
+# SERVICE INSTALLATION
+#==============================================================================
+
+[Install]
+WantedBy=multi-user.target

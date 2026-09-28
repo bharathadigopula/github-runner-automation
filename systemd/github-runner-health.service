@@ -1,0 +1,21 @@
+#==============================================================================
+# RUNNER HEALTH SERVICE
+#==============================================================================
+
+#==============================================================================
+# UNIT IDENTITY
+#==============================================================================
+
+[Unit]
+Description=Recover an unresponsive GitHub runner
+After=github-runner-deploy.service github-runner-validate.service
+
+#==============================================================================
+# HEALTH RECOVERY
+#==============================================================================
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/github-runner/current/.env
+ExecStart=/usr/bin/bash /opt/github-runner/current/scripts/manage.sh recover
+TimeoutStartSec=300

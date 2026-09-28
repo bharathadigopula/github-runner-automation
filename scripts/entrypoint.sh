@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+#==============================================================================
+# EPHEMERAL RUNNER ENTRYPOINT
+#==============================================================================
+
+#==============================================================================
+# SHELL SAFETY
+#==============================================================================
+
+set -Eeuo pipefail
+trap 'printf "github_runner_failure=line_%s\n" "$LINENO"' ERR
+
+#==============================================================================
+# RUNTIME INPUTS
+#==============================================================================
+
+github_api_url="${GITHUB_API_URL:-https://api.github.com}"
+github_scope="${GITHUB_SCOPE:?GITHUB_SCOPE is required}"
+github_target="${GITHUB_TARGET:?GITHUB_TARGET is required}"
+runner_labels="${RUNNER_LABELS:?RUNNER_LABELS is required}"
+runner_name="${RUNNER_NAME_PREFIX:?RUNNER_NAME_PREFIX is required}-$(hostname)"
+token_file="/run/secrets/github_token"
+
+if [[ ! -r "$token_file" ]]; then
+  printf 'GitHub token secret is not mounted.\n' >&2
+  exit 1
+fi
+
+#==============================================================================
+# REGISTRATION ENDPOINT SELECTION
+#==============================================================================
+
+case "$github_scope" in
+  repo)
+    registration_endpoint="$github_api_url/repos/$github_target/actions/runners/registration-token"
+    runner_url="https://github.com/$github_target"
+    ;;
+  org)
+    registration_endpoint="$github_api_url/orgs/$github_target/actions/runners/registration-token"
+    runner_url="https://github.com/$github_target"
+    ;;
+  *)
+    printf 'GITHUB_SCOPE must be "repo" or "org".\n' >&2
+    exit 1
+    ;;
+esac
+
+#==============================================================================
+# SHORT-LIVED REGISTRATION TOKEN
+#==============================================================================
+
+registration_token=$(curl --fail --silent --show-error \
+  --request POST \
+  --header "Authorization: Bearer $(<"$token_file")" \
+  --header 'Accept: application/vnd.github+json' \
+  --header 'X-GitHub-Api-Version: 2022-11-28' \
+  "$registration_endpoint" | jq -r '.token')
+
+if [[ -z "$registration_token" || "$registration_token" == "null" ]]; then
+  printf 'GitHub did not return a runner registration token.\n' >&2
+  exit 1
+fi
+
+#==============================================================================
+# EPHEMERAL REGISTRATION AND EXECUTION
+#==============================================================================
+
+./config.sh \
+  --unattended \
+  --ephemeral \
+  --url "$runner_url" \
+  --token "$registration_token" \
+  --name "$runner_name" \
+  --labels "$runner_labels" \
+  --work "_work"
+
+cleanup() {
+  ./config.sh remove --token "$registration_token" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+./run.sh

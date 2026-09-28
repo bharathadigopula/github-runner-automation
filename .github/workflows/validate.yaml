@@ -1,0 +1,35 @@
+#==============================================================================
+# GITHUB RUNNER STACK VALIDATION WORKFLOW
+#==============================================================================
+
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+#==============================================================================
+# VALIDATION JOB
+#==============================================================================
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+          shellcheck scripts/*.sh
+
+      - name: Validate runner stack
+        run: bash scripts/validate.sh
+
+      - name: Build runner image
+        run: docker compose build
