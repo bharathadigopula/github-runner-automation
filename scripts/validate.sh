@@ -98,6 +98,13 @@ if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/ma
   exit 1
 fi
 
+if ! grep -Fq 'attempt <= 30' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq -- '--status running runner-deploy' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq -- '--status running runner-validate' "$repository_root/scripts/manage.sh"; then
+  printf 'Runner verification must tolerate ephemeral container restarts and inspect both roles.\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq "GITHUB_RUNNER_BIND_ADDRESS=\$github_runner_bind_address" "$repository_root/scripts/bootstrap.sh"; then
   printf 'The metrics bind address must be forwarded through the versioned bootstrap.\n' >&2
   exit 1
