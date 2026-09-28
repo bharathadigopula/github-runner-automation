@@ -100,8 +100,10 @@ deploy_runners() {
   install -m 0644 "$release_path/systemd/github-runner-metrics.timer" /etc/systemd/system/github-runner-metrics.timer
   systemctl daemon-reload
   install -d -m 0755 /var/lib/github-runner-metrics
-  systemctl enable --now github-runner-deploy.service
-  systemctl enable --now github-runner-validate.service
+  systemctl enable github-runner-deploy.service
+  systemctl enable github-runner-validate.service
+  systemctl restart github-runner-deploy.service
+  systemctl restart github-runner-validate.service
   docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" up --detach runner-metrics
   systemctl enable --now github-runner-health.timer
   systemctl enable --now github-runner-metrics.timer
