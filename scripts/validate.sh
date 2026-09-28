@@ -89,6 +89,13 @@ if ! grep -Fq "printf 'github_runner_status=ready" "$repository_root/scripts/man
   exit 1
 fi
 
+recovery_restart="systemctl restart \"\$component\""
+if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/manage.sh" || \
+  [[ "$(grep -Fc "$recovery_restart" "$repository_root/scripts/manage.sh")" != "1" ]]; then
+  printf 'Runner recovery must restart both roles and publish its readiness marker.\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq "GITHUB_RUNNER_BIND_ADDRESS=\$github_runner_bind_address" "$repository_root/scripts/bootstrap.sh"; then
   printf 'The metrics bind address must be forwarded through the versioned bootstrap.\n' >&2
   exit 1
