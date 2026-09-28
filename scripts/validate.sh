@@ -91,6 +91,13 @@ if ! grep -Fq "printf 'github_runner_status=ready" "$repository_root/scripts/man
   exit 1
 fi
 
+status_marker_line=$(grep -nF "printf 'github_runner_status=ready" "$repository_root/scripts/manage.sh" | cut -d: -f1)
+status_diagnostics_line=$(grep -nF '  docker system df' "$repository_root/scripts/manage.sh" | cut -d: -f1)
+if [[ -z "$status_marker_line" || -z "$status_diagnostics_line" ]] || (( status_marker_line >= status_diagnostics_line )); then
+  printf 'Runner status marker must precede verbose diagnostics for OCI output capture.\n' >&2
+  exit 1
+fi
+
 recovery_restart="systemctl restart \"\$component\""
 if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/manage.sh" || \
   [[ "$(grep -Fc "$recovery_restart" "$repository_root/scripts/manage.sh")" != "1" ]]; then

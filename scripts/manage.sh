@@ -150,25 +150,13 @@ verify_runners() {
 #==============================================================================
 
 status_runners() {
-  local component
-  local exit_code=0
-
-  for component in github-runner-deploy.service github-runner-validate.service github-runner-health.timer github-runner-metrics.timer; do
-    if runner_service_running "$component"; then
-      printf '%s=active\n' "$component"
-    else
-      printf '%s=inactive\n' "$component"
-      exit_code=1
-    fi
-  done
-
+  verify_runners
+  systemctl is-active --quiet github-runner-health.timer
+  systemctl is-active --quiet github-runner-metrics.timer
+  printf 'github_runner_status=ready\n'
   df --human-readable / /var/lib/docker
   docker system df
-  docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps || exit_code=1
-  if (( exit_code == 0 )); then
-    printf 'github_runner_status=ready\n'
-  fi
-  return "$exit_code"
+  docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps
 }
 
 #==============================================================================
