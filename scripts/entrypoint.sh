@@ -76,7 +76,7 @@ setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs .
   --labels "$runner_labels" \
   --work "_work"
 
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 cleanup() {
   setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs ./config.sh remove --token "$registration_token" >/dev/null 2>&1 || true
   rm -f .credentials .credentials_rsaparams .runner

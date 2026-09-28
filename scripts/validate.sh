@@ -21,6 +21,7 @@ required_files=(
   compose.yaml
   scripts/entrypoint.sh
   scripts/export-metrics.sh
+  scripts/check-latest-versions.sh
   scripts/install-docker.sh
   scripts/manage.sh
   systemd/github-runner-health.service

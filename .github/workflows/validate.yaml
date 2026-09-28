@@ -31,5 +31,8 @@ jobs:
       - name: Validate runner stack
         run: bash scripts/validate.sh
 
+      - name: Check latest upstream versions
+        run: bash scripts/check-latest-versions.sh
+
       - name: Build runner image
         run: docker compose build
