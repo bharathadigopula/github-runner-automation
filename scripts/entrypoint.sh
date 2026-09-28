@@ -24,12 +24,21 @@ token_file="/run/secrets/github_token"
 docker_socket_gid=$(stat --format '%g' /var/run/docker.sock)
 export HOME=/home/runner
 
+cleanup_runner_state() {
+  find /home/runner/_work -mindepth 1 -maxdepth 1 ! -name _tool -exec rm -rf -- {} +
+  if [[ ",$runner_labels," == *,deploy,* ]]; then
+    docker builder prune --all --force >/dev/null 2>&1 || true
+    docker image prune --all --force >/dev/null 2>&1 || true
+  fi
+}
+
 if [[ ! -r "$token_file" ]]; then
   printf 'GitHub token secret is not mounted.\n' >&2
   exit 1
 fi
 
 install -d -o 1001 -g 1001 -m 0755 /home/runner/_work /home/runner/_work/_tool
+cleanup_runner_state
 chown -R 1001:1001 /home/runner/_work
 
 #==============================================================================
@@ -84,6 +93,7 @@ setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs .
 cleanup() {
   setpriv --reuid 1001 --regid 1001 --groups "$docker_socket_gid" --no-new-privs ./config.sh remove --token "$registration_token" >/dev/null 2>&1 || true
   rm -f .credentials .credentials_rsaparams .runner
+  cleanup_runner_state
 }
 trap cleanup EXIT
 
