@@ -41,6 +41,7 @@ services:
       GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
       GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
       GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
+      HOME: /home/runner
       RUNNER_LABELS: ${RUNNER_ORGANISATION_LABEL:-bharathcloudops},${RUNNER_LOCATION_LABEL:-oci-platform},deploy
       RUNNER_NAME: ${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}-deploy-${RUNNER_DEPLOY_SEQUENCE:-01}
 
@@ -79,6 +80,7 @@ services:
       GITHUB_API_URL: ${GITHUB_API_URL:-https://api.github.com}
       GITHUB_SCOPE: ${GITHUB_SCOPE:-repo}
       GITHUB_TARGET: ${GITHUB_TARGET:?GITHUB_TARGET is required}
+      HOME: /home/runner
       RUNNER_LABELS: ${RUNNER_ORGANISATION_LABEL:-bharathcloudops},${RUNNER_LOCATION_LABEL:-oci-platform},validate
       RUNNER_NAME: ${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}-validate-${RUNNER_VALIDATE_SEQUENCE:-01}
 
