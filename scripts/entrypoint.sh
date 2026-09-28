@@ -27,9 +27,12 @@ export HOME=/home/runner
 cleanup_runner_state() {
   find /home/runner/_work -mindepth 1 -maxdepth 1 ! -name _tool -exec rm -rf -- {} +
   if [[ ",$runner_labels," == *,deploy,* ]]; then
-    docker builder prune --all --force >/dev/null 2>&1 || true
-    docker image prune --all --force >/dev/null 2>&1 || true
+    DOCKER_CONFIG=/tmp/github-runner-docker-cleanup docker builder prune --all --force >/dev/null 2>&1 || true
+    DOCKER_CONFIG=/tmp/github-runner-docker-cleanup docker image prune --all --force >/dev/null 2>&1 || true
+    rm -rf /tmp/github-runner-docker-cleanup
   fi
+  install -d -o 1001 -g 1001 -m 0700 /home/runner/.docker
+  chown -R 1001:1001 /home/runner/.docker
 }
 
 if [[ ! -r "$token_file" ]]; then
