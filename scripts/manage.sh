@@ -122,20 +122,27 @@ runner_service_running() {
 }
 
 verify_runners() {
-  if ! runner_service_running github-runner-deploy.service || \
-    ! runner_service_running github-runner-validate.service; then
-    printf 'One or both runner services are not active.\n' >&2
-    systemctl status --no-pager github-runner-deploy.service github-runner-validate.service >&2 || true
-    return 1
-  fi
+  local attempt
+  local deploy_container
+  local validate_container
 
-  if ! docker inspect --format 'runner_deploy={{.HostConfig.NanoCpus}}/{{.HostConfig.Memory}}' \
-    "$(docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps --quiet runner-deploy)" >/dev/null; then
-    printf 'Unable to inspect the deploy runner container.\n' >&2
-    return 1
-  fi
+  for (( attempt = 1; attempt <= 30; attempt++ )); do
+    deploy_container=$(docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps --quiet --status running runner-deploy)
+    validate_container=$(docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps --quiet --status running runner-validate)
+    if runner_service_running github-runner-deploy.service && \
+      runner_service_running github-runner-validate.service && \
+      [[ -n "$deploy_container" && -n "$validate_container" ]] && \
+      docker inspect "$deploy_container" "$validate_container" >/dev/null 2>&1; then
+      printf 'github_runner_verify=ready\n'
+      return 0
+    fi
+    sleep 2
+  done
 
-  printf 'github_runner_verify=ready\n'
+  printf 'One or both runner services failed to become ready.\n' >&2
+  systemctl status --no-pager github-runner-deploy.service github-runner-validate.service >&2 || true
+  docker compose --project-directory "$install_root/current" --file "$install_root/current/compose.yaml" ps >&2 || true
+  return 1
 }
 
 #==============================================================================
