@@ -28,6 +28,9 @@ if [[ ! -r "$token_file" ]]; then
   exit 1
 fi
 
+install -d -o 1001 -g 1001 -m 0755 /home/runner/_work /home/runner/_work/_tool
+chown -R 1001:1001 /home/runner/_work
+
 #==============================================================================
 # REGISTRATION ENDPOINT SELECTION
 #==============================================================================
