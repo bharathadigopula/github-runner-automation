@@ -56,6 +56,7 @@ fi
 if ! grep -Fq -- '--ephemeral' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq -- '--reuid 1001' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'docker_socket_gid' "$repository_root/scripts/entrypoint.sh" || \
+  ! grep -Fq 'export HOME=/home/runner' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'chown -R 1001:1001 /home/runner/_work' "$repository_root/scripts/entrypoint.sh"; then
   printf 'Runners must run ephemeral with a writable workspace and non-root Docker socket access.\n' >&2
   exit 1
