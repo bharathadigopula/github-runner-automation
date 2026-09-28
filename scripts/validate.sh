@@ -65,6 +65,17 @@ if grep -Fq 'GITHUB_TOKEN=' "$repository_root/compose.yaml"; then
   exit 1
 fi
 
+if ! grep -Fq "chown root:root \"\$release_path/secrets/github-token\"" "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "chmod 0400 \"\$release_path/secrets/github-token\"" "$repository_root/scripts/manage.sh"; then
+  printf 'The long-lived GitHub token must remain readable only by root.\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq "GITHUB_RUNNER_BIND_ADDRESS=\$github_runner_bind_address" "$repository_root/scripts/bootstrap.sh"; then
+  printf 'The metrics bind address must be forwarded through the versioned bootstrap.\n' >&2
+  exit 1
+fi
+
 #==============================================================================
 # RESOURCE ISOLATION VALIDATION
 #==============================================================================
