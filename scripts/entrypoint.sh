@@ -39,6 +39,7 @@ if [[ ! -r "$token_file" ]]; then
   printf 'GitHub token secret is not mounted.\n' >&2
   exit 1
 fi
+github_token=$(<"$token_file")
 
 install -d -o 1001 -g 1001 -m 0755 /home/runner/_work /home/runner/_work/_tool
 cleanup_runner_state
@@ -51,10 +52,12 @@ chown -R 1001:1001 /home/runner/_work
 case "$github_scope" in
   repo)
     registration_endpoint="$github_api_url/repos/$github_target/actions/runners/registration-token"
+    runners_endpoint="$github_api_url/repos/$github_target/actions/runners"
     runner_url="https://github.com/$github_target"
     ;;
   org)
     registration_endpoint="$github_api_url/orgs/$github_target/actions/runners/registration-token"
+    runners_endpoint="$github_api_url/orgs/$github_target/actions/runners"
     runner_url="https://github.com/$github_target"
     ;;
   *)
@@ -64,12 +67,31 @@ case "$github_scope" in
 esac
 
 #==============================================================================
+# STALE REGISTRATION RECONCILIATION
+#==============================================================================
+
+existing_runners=$(curl --fail --silent --show-error \
+  --header "Authorization: Bearer $github_token" \
+  --header 'Accept: application/vnd.github+json' \
+  --header 'X-GitHub-Api-Version: 2022-11-28' \
+  "$runners_endpoint?name=$runner_name&per_page=100")
+while IFS= read -r existing_runner_id; do
+  curl --fail --silent --show-error \
+    --request DELETE \
+    --header "Authorization: Bearer $github_token" \
+    --header 'Accept: application/vnd.github+json' \
+    --header 'X-GitHub-Api-Version: 2022-11-28' \
+    "$runners_endpoint/$existing_runner_id" \
+    --output /dev/null
+done < <(jq --raw-output --arg runner_name "$runner_name" '.runners[] | select(.name == $runner_name) | .id' <<< "$existing_runners")
+
+#==============================================================================
 # SHORT-LIVED REGISTRATION TOKEN
 #==============================================================================
 
 registration_token=$(curl --fail --silent --show-error \
   --request POST \
-  --header "Authorization: Bearer $(<"$token_file")" \
+  --header "Authorization: Bearer $github_token" \
   --header 'Accept: application/vnd.github+json' \
   --header 'X-GitHub-Api-Version: 2022-11-28' \
   "$registration_endpoint" | jq -r '.token')
