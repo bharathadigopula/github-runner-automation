@@ -32,6 +32,7 @@ RUN chmod 0755 /usr/local/bin/github-runner-entrypoint
 #==============================================================================
 
 USER root
+ENV HOME=/home/runner
 WORKDIR /home/runner
 
 ENTRYPOINT ["/usr/local/bin/github-runner-entrypoint"]

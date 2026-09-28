@@ -57,6 +57,7 @@ if ! grep -Fq -- '--ephemeral' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq -- '--reuid 1001' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'docker_socket_gid' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'export HOME=/home/runner' "$repository_root/scripts/entrypoint.sh" || \
+  ! grep -Fq 'ENV HOME=/home/runner' "$repository_root/Dockerfile" || \
   ! grep -Fq 'chown -R 1001:1001 /home/runner/_work' "$repository_root/scripts/entrypoint.sh"; then
   printf 'Runners must run ephemeral with a writable workspace and non-root Docker socket access.\n' >&2
   exit 1
@@ -94,6 +95,7 @@ deploy_name_definition="RUNNER_NAME: \${RUNNER_NAME_PREFIX:-bharathcloudops-oci-
 deploy_label_definition="RUNNER_LABELS: \${RUNNER_ORGANISATION_LABEL:-bharathcloudops},\${RUNNER_LOCATION_LABEL:-oci-platform},deploy"
 validate_name_definition="RUNNER_NAME: \${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}-validate-\${RUNNER_VALIDATE_SEQUENCE:-01}"
 validate_label_definition="RUNNER_LABELS: \${RUNNER_ORGANISATION_LABEL:-bharathcloudops},\${RUNNER_LOCATION_LABEL:-oci-platform},validate"
+home_definition='HOME: /home/runner'
 
 if ! grep -Fq 'cpus: "0.50"' <<< "$deploy_compose" || \
   ! grep -Fq 'memory: 1024M' <<< "$deploy_compose" || \
@@ -105,8 +107,10 @@ fi
 
 if ! grep -Fq "$deploy_name_definition" <<< "$deploy_compose" || \
   ! grep -Fq "$deploy_label_definition" <<< "$deploy_compose" || \
+  ! grep -Fq "$home_definition" <<< "$deploy_compose" || \
   ! grep -Fq "$validate_name_definition" <<< "$validate_compose" || \
-  ! grep -Fq "$validate_label_definition" <<< "$validate_compose"; then
+  ! grep -Fq "$validate_label_definition" <<< "$validate_compose" || \
+  ! grep -Fq "$home_definition" <<< "$validate_compose"; then
   printf 'Runner labels must distinguish the deploy and validate roles.\n' >&2
   exit 1
 fi
