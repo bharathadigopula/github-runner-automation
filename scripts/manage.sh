@@ -171,16 +171,14 @@ status_runners() {
 recover_runners() {
   require_root
   local component
-  local exit_code=0
 
   for component in github-runner-deploy.service github-runner-validate.service; do
-    if ! runner_service_running "$component"; then
-      printf 'github_runner_recover=%s\n' "$component"
-      systemctl restart "$component" || exit_code=1
-    fi
+    printf 'github_runner_restarting=%s\n' "$component"
+    systemctl restart "$component"
   done
 
-  return "$exit_code"
+  verify_runners
+  printf 'github_runner_recover=ready\n'
 }
 
 #==============================================================================

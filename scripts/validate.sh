@@ -59,9 +59,11 @@ if ! grep -Fq -- '--ephemeral' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'export HOME=/home/runner' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'ENV HOME=/home/runner' "$repository_root/Dockerfile" || \
   ! grep -Fq 'python3-venv' "$repository_root/Dockerfile" || \
+  ! grep -Fq 'DOCKER_CONFIG=/tmp/github-runner-docker-cleanup' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'docker builder prune --all --force' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'docker image prune --all --force' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq '! -name _tool' "$repository_root/scripts/entrypoint.sh" || \
+  ! grep -Fq 'chown -R 1001:1001 /home/runner/.docker' "$repository_root/scripts/entrypoint.sh" || \
   ! grep -Fq 'chown -R 1001:1001 /home/runner/_work' "$repository_root/scripts/entrypoint.sh"; then
   printf 'Runners must run ephemeral with required tools, bounded storage, and non-root Docker socket access.\n' >&2
   exit 1
@@ -86,6 +88,13 @@ fi
 
 if ! grep -Fq "printf 'github_runner_status=ready" "$repository_root/scripts/manage.sh"; then
   printf 'Runner status must publish its OCI Run Command readiness marker.\n' >&2
+  exit 1
+fi
+
+recovery_restart="systemctl restart \"\$component\""
+if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/manage.sh" || \
+  [[ "$(grep -Fc "$recovery_restart" "$repository_root/scripts/manage.sh")" != "1" ]]; then
+  printf 'Runner recovery must restart both roles and publish its readiness marker.\n' >&2
   exit 1
 fi
 
