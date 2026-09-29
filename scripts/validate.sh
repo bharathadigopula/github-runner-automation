@@ -81,9 +81,9 @@ if ! grep -Fq "chown root:root \"\$release_path/secrets/github-token\"" "$reposi
   exit 1
 fi
 
-if ! grep -Fq 'systemctl restart github-runner-deploy.service' "$repository_root/scripts/manage.sh" || \
-  ! grep -Fq 'systemctl restart github-runner-validate.service' "$repository_root/scripts/manage.sh"; then
-  printf 'Deployments must restart both runner services to activate the selected release.\n' >&2
+if ! grep -Fq 'systemctl reload-or-restart github-runner-deploy.service' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq 'systemctl reload-or-restart github-runner-validate.service' "$repository_root/scripts/manage.sh"; then
+  printf 'Deployments must reconcile both runner services without stopping unchanged containers.\n' >&2
   exit 1
 fi
 
