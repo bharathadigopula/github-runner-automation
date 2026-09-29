@@ -126,8 +126,10 @@ if ! grep -Fq "GITHUB_RUNNER_BIND_ADDRESS=\$github_runner_bind_address" "$reposi
 fi
 
 if ! grep -Fq "workflow_runs_endpoint=\"\$GITHUB_API_URL/repos/\$GITHUB_TARGET/actions/runs?per_page=100\"" "$repository_root/scripts/export-metrics.sh" || \
-  ! grep -Fq "workflow_runs_endpoint=\"\$GITHUB_API_URL/orgs/\$GITHUB_TARGET/actions/runs?per_page=100\"" "$repository_root/scripts/export-metrics.sh"; then
-  printf 'Runner workflow metrics must use the endpoint matching the configured GitHub scope.\n' >&2
+  ! grep -Fq "\$GITHUB_API_URL/orgs/\$GITHUB_TARGET/repos?type=all&per_page=100&page=\$repository_page" "$repository_root/scripts/export-metrics.sh" || \
+  ! grep -Fq "\$GITHUB_API_URL/repos/\$repository_name/actions/runs?per_page=100" "$repository_root/scripts/export-metrics.sh" || \
+  grep -Fq "\$GITHUB_API_URL/orgs/\$GITHUB_TARGET/actions/runs" "$repository_root/scripts/export-metrics.sh"; then
+  printf 'Runner workflow metrics must use supported repository-scoped workflow run endpoints.\n' >&2
   exit 1
 fi
 

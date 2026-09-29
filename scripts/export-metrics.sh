@@ -29,7 +29,6 @@ case "$GITHUB_SCOPE" in
     ;;
   org)
     listing_endpoint="$GITHUB_API_URL/orgs/$GITHUB_TARGET/actions/runners"
-    workflow_runs_endpoint="$GITHUB_API_URL/orgs/$GITHUB_TARGET/actions/runs?per_page=100"
     ;;
   *) printf 'GITHUB_SCOPE must be "repo" or "org".\n' >&2; exit 1 ;;
 esac
@@ -39,20 +38,43 @@ if [[ ! -r "$token_file" ]]; then
   exit 1
 fi
 
+github_token=$(<"$token_file")
+
+github_get() {
+  curl --fail --silent --show-error \
+    --header "Authorization: Bearer $github_token" \
+    --header 'Accept: application/vnd.github+json' \
+    --header 'X-GitHub-Api-Version: 2022-11-28' \
+    "$1"
+}
+
 #==============================================================================
 # RUNNER STATE RETRIEVAL
 #==============================================================================
 
-runners_json=$(curl --fail --silent --show-error \
-  --header "Authorization: Bearer $(<"$token_file")" \
-  --header 'Accept: application/vnd.github+json' \
-  --header 'X-GitHub-Api-Version: 2022-11-28' \
-  "$listing_endpoint")
-workflow_runs_json=$(curl --fail --silent --show-error \
-  --header "Authorization: Bearer $(<"$token_file")" \
-  --header 'Accept: application/vnd.github+json' \
-  --header 'X-GitHub-Api-Version: 2022-11-28' \
-  "$workflow_runs_endpoint")
+runners_json=$(github_get "$listing_endpoint")
+
+if [[ "$GITHUB_SCOPE" == "repo" ]]; then
+  workflow_runs_json=$(github_get "$workflow_runs_endpoint")
+else
+  repository_page=1
+  workflow_runs_json='{"workflow_runs":[]}'
+  while :; do
+    repositories_json=$(github_get "$GITHUB_API_URL/orgs/$GITHUB_TARGET/repos?type=all&per_page=100&page=$repository_page")
+    repository_count=$(jq 'length' <<< "$repositories_json")
+    while IFS= read -r repository_name; do
+      repository_runs_json=$(github_get "$GITHUB_API_URL/repos/$repository_name/actions/runs?per_page=100")
+      workflow_runs_json=$(jq -sc \
+        '{workflow_runs: ([.[].workflow_runs[]] | sort_by(.created_at) | reverse | .[:100])}' \
+        <(printf '%s\n' "$workflow_runs_json") \
+        <(printf '%s\n' "$repository_runs_json"))
+    done < <(jq -r '.[] | select(.archived == false) | .full_name' <<< "$repositories_json")
+    if (( repository_count < 100 )); then
+      break
+    fi
+    (( repository_page += 1 ))
+  done
+fi
 
 #==============================================================================
 # TEXTFILE COLLECTOR RENDERING
