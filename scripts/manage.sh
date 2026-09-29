@@ -66,6 +66,9 @@ EOF
 #==============================================================================
 
 deploy_runners() {
+  local deployment_fingerprint
+  local fingerprint_file="$install_root/deployment.sha256"
+
   require_root
   if ! jq -e '
     type == "object" and
@@ -77,6 +80,12 @@ deploy_runners() {
 
   validate_stack
   docker compose version >/dev/null
+  deployment_fingerprint=$(printf '%s\0' "$release_ref" "${GITHUB_API_URL:-https://api.github.com}" "${GITHUB_RUNNER_BIND_ADDRESS:-127.0.0.1}" "${GITHUB_RUNNER_VERSION:-2.337.0}" "${GITHUB_SCOPE:-repo}" "${GITHUB_TARGET:-}" "${RUNNER_LOCATION_LABEL:-oci-platform}" "${RUNNER_NAME_PREFIX:-bharathcloudops-oci-platform}" "${RUNNER_ORGANISATION_LABEL:-bharathcloudops}" "$secret_bundle" | sha256sum | awk '{print $1}')
+  if [[ -f "$fingerprint_file" && "$(<"$fingerprint_file")" == "$deployment_fingerprint" && -L "$install_root/current" ]] && verify_runners; then
+    printf 'github_runner_deploy=unchanged\n'
+    printf 'github_runner_deploy=ready\n'
+    return 0
+  fi
   install -d -m 0755 "$install_root/releases"
   rm -rf "$release_path"
   install -d -m 0755 "$release_path"
@@ -109,6 +118,9 @@ deploy_runners() {
   systemctl enable --now github-runner-metrics.timer
   printf 'github_runner_deploy=ready\n'
   verify_runners
+  printf '%s\n' "$deployment_fingerprint" > "$fingerprint_file.partial"
+  chmod 0600 "$fingerprint_file.partial"
+  mv "$fingerprint_file.partial" "$fingerprint_file"
 }
 
 #==============================================================================

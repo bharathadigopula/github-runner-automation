@@ -87,6 +87,14 @@ if ! grep -Fq 'systemctl restart github-runner-deploy.service' "$repository_root
   exit 1
 fi
 
+if ! grep -Fq 'deployment.sha256' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "printf 'github_runner_deploy=unchanged" "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "dpkg-query --show --showformat='\${Version}' docker-ce" "$repository_root/scripts/install-docker.sh" || \
+  ! grep -Fq "printf 'docker_install=unchanged" "$repository_root/scripts/install-docker.sh"; then
+  printf 'Runner deployments must skip unchanged healthy state and matching Docker packages.\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq "printf 'github_runner_status=ready" "$repository_root/scripts/manage.sh"; then
   printf 'Runner status must publish its OCI Run Command readiness marker.\n' >&2
   exit 1
