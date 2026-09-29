@@ -23,8 +23,14 @@ token_file="$install_root/current/secrets/github-token"
 source "$install_root/current/.env"
 
 case "$GITHUB_SCOPE" in
-  repo) listing_endpoint="$GITHUB_API_URL/repos/$GITHUB_TARGET/actions/runners" ;;
-  org) listing_endpoint="$GITHUB_API_URL/orgs/$GITHUB_TARGET/actions/runners" ;;
+  repo)
+    listing_endpoint="$GITHUB_API_URL/repos/$GITHUB_TARGET/actions/runners"
+    workflow_runs_endpoint="$GITHUB_API_URL/repos/$GITHUB_TARGET/actions/runs?per_page=100"
+    ;;
+  org)
+    listing_endpoint="$GITHUB_API_URL/orgs/$GITHUB_TARGET/actions/runners"
+    workflow_runs_endpoint="$GITHUB_API_URL/orgs/$GITHUB_TARGET/actions/runs?per_page=100"
+    ;;
   *) printf 'GITHUB_SCOPE must be "repo" or "org".\n' >&2; exit 1 ;;
 esac
 
@@ -46,7 +52,7 @@ workflow_runs_json=$(curl --fail --silent --show-error \
   --header "Authorization: Bearer $(<"$token_file")" \
   --header 'Accept: application/vnd.github+json' \
   --header 'X-GitHub-Api-Version: 2022-11-28' \
-  "$GITHUB_API_URL/repos/$GITHUB_TARGET/actions/runs?per_page=100")
+  "$workflow_runs_endpoint")
 
 #==============================================================================
 # TEXTFILE COLLECTOR RENDERING
