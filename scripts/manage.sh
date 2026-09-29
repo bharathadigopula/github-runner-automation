@@ -170,15 +170,7 @@ status_runners() {
 #==============================================================================
 
 recover_runners() {
-  require_root
-  local component
-
-  for component in github-runner-deploy.service github-runner-validate.service; do
-    printf 'github_runner_restarting=%s\n' "$component"
-    systemctl restart "$component"
-  done
-
-  verify_runners
+  health_runners
   printf 'github_runner_recover=ready\n'
 }
 

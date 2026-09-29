@@ -100,10 +100,9 @@ if [[ -z "$status_marker_line" || -z "$status_diagnostics_line" ]] || (( status_
   exit 1
 fi
 
-recovery_restart="systemctl restart \"\$component\""
 if ! grep -Fq "printf 'github_runner_recover=ready" "$repository_root/scripts/manage.sh" || \
-  [[ "$(grep -Fc "$recovery_restart" "$repository_root/scripts/manage.sh")" != "1" ]]; then
-  printf 'Runner recovery must restart both roles and publish its readiness marker.\n' >&2
+  ! grep -A2 -F 'recover_runners()' "$repository_root/scripts/manage.sh" | grep -Fq 'health_runners'; then
+  printf 'Runner recovery must use non-disruptive health recovery and publish its readiness marker.\n' >&2
   exit 1
 fi
 
