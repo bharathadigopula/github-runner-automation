@@ -81,9 +81,17 @@ if ! grep -Fq "chown root:root \"\$release_path/secrets/github-token\"" "$reposi
   exit 1
 fi
 
-if ! grep -Fq 'systemctl restart github-runner-deploy.service' "$repository_root/scripts/manage.sh" || \
-  ! grep -Fq 'systemctl restart github-runner-validate.service' "$repository_root/scripts/manage.sh"; then
-  printf 'Deployments must restart both runner services to activate the selected release.\n' >&2
+if ! grep -Fq 'systemctl reload-or-restart github-runner-deploy.service' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq 'systemctl reload-or-restart github-runner-validate.service' "$repository_root/scripts/manage.sh"; then
+  printf 'Deployments must reconcile both runner services without stopping unchanged containers.\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq 'deployment.sha256' "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "printf 'github_runner_deploy=unchanged" "$repository_root/scripts/manage.sh" || \
+  ! grep -Fq "dpkg-query --show --showformat='\${Version}' docker-ce" "$repository_root/scripts/install-docker.sh" || \
+  ! grep -Fq "printf 'docker_install=unchanged" "$repository_root/scripts/install-docker.sh"; then
+  printf 'Runner deployments must skip unchanged healthy state and matching Docker packages.\n' >&2
   exit 1
 fi
 
