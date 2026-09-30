@@ -173,7 +173,8 @@ fi
 
 if ! grep -Fq 'quay.io/prometheus/node-exporter:v1.12.1' "$repository_root/compose.yaml" || \
   ! grep -Fq 'memory: 32M' "$repository_root/compose.yaml" || \
-  ! grep -Fq 'github_runner_online' "$repository_root/scripts/export-metrics.sh"; then
+  ! grep -Fq 'github_runner_online' "$repository_root/scripts/export-metrics.sh" || \
+  ! grep -Fq 'github_actions_oci_queued_jobs' "$repository_root/scripts/export-metrics.sh"; then
   printf 'Runner monitoring must use the pinned private textfile exporter.\n' >&2
   exit 1
 fi
