@@ -76,6 +76,34 @@ else
   done
 fi
 
+queued_deploy_jobs=0
+queued_validate_jobs=0
+while IFS=$'\t' read -r repository_name run_id; do
+  jobs_json=$(github_get "$GITHUB_API_URL/repos/$repository_name/actions/runs/$run_id/jobs?filter=latest&per_page=100")
+  queued_deploy_count=$(jq \
+    --arg organisation_label "${RUNNER_ORGANISATION_LABEL:-bharathcloudops}" \
+    --arg location_label "${RUNNER_LOCATION_LABEL:-oci-platform}" \
+    '[.jobs[] | select(
+      .status == "queued" and
+      (.labels | index("self-hosted")) and
+      (.labels | index($organisation_label)) and
+      (.labels | index($location_label)) and
+      (.labels | index("deploy"))
+    )] | length' <<< "$jobs_json")
+  queued_validate_count=$(jq \
+    --arg organisation_label "${RUNNER_ORGANISATION_LABEL:-bharathcloudops}" \
+    --arg location_label "${RUNNER_LOCATION_LABEL:-oci-platform}" \
+    '[.jobs[] | select(
+      .status == "queued" and
+      (.labels | index("self-hosted")) and
+      (.labels | index($organisation_label)) and
+      (.labels | index($location_label)) and
+      (.labels | index("validate"))
+    )] | length' <<< "$jobs_json")
+  (( queued_deploy_jobs += queued_deploy_count )) || true
+  (( queued_validate_jobs += queued_validate_count )) || true
+done < <(jq -r '.workflow_runs[] | select(.status == "queued") | [.repository.full_name, .id] | @tsv' <<< "$workflow_runs_json")
+
 #==============================================================================
 # TEXTFILE COLLECTOR RENDERING
 #==============================================================================
@@ -92,6 +120,8 @@ render_path="$textfile_directory/github_runner.prom.$$"
   printf '# TYPE github_runner_scrape_success gauge\n'
   printf '# HELP github_actions_workflow_runs Current workflow runs by status among the latest one hundred runs.\n'
   printf '# TYPE github_actions_workflow_runs gauge\n'
+  printf '# HELP github_actions_oci_queued_jobs Queued jobs explicitly requesting a BharathCoudOps OCI runner.\n'
+  printf '# TYPE github_actions_oci_queued_jobs gauge\n'
   printf '# HELP github_actions_failed_runs_6h Failed workflow runs created during the last six hours.\n'
   printf '# TYPE github_actions_failed_runs_6h gauge\n'
 
@@ -112,6 +142,9 @@ render_path="$textfile_directory/github_runner.prom.$$"
     workflow_count=$(jq --arg workflow_status "$workflow_status" '[.workflow_runs[] | select(.status == $workflow_status)] | length' <<< "$workflow_runs_json")
     printf 'github_actions_workflow_runs{status="%s"} %s\n' "$workflow_status" "$workflow_count"
   done
+
+  printf 'github_actions_oci_queued_jobs{role="deploy"} %s\n' "$queued_deploy_jobs"
+  printf 'github_actions_oci_queued_jobs{role="validate"} %s\n' "$queued_validate_jobs"
 
   failed_runs=$(jq --argjson cutoff "$(( $(date +%s) - 21600 ))" '[.workflow_runs[] | select(.conclusion == "failure" and (.created_at | fromdateiso8601) >= $cutoff)] | length' <<< "$workflow_runs_json")
   printf 'github_actions_failed_runs_6h %s\n' "$failed_runs"
